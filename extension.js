@@ -339,18 +339,185 @@ function table_engine(query, options, type, table) {
     return answer;
 }
 
-const questions = get_questions();
-// const revx = new ChatGPT_AI();
+// const questions = get_questions();
+// // const revx = new ChatGPT_AI();
 
-// revx.on_ready(() => {
-//     const resolver = new QuestionResolver(questions, "provided", provider);
-//     resolver.answer_all();
+// // revx.on_ready(() => {
+// //     const resolver = new QuestionResolver(questions, "provided", provider);
+// //     resolver.answer_all();
+// // });
+
+// // Requester: (query, options, type) => boolean | string
+// const resolver = new QuestionResolver(questions, "provided", (query, options, type) => {
+//     return table_engine(query, options, type, table);
 // });
 
-// Requester: (query, options, type) => boolean | string
-const resolver = new QuestionResolver(questions, "provided", (query, options, type) => {
-    return table_engine(query, options, type, table);
-});
+// resolver.answer_all_engine();
+  
+  function panel() {
+    const p = document.createElement("div");
+    const style = p.style;
+    
+    style.display = "flex";
+    style.position = "fixed";
+    style.top = "50vh";
+    style.left = "50vw";
+    style.transform = "translate(-50%, -50%)";
+    
+    style.background = "#0e0e0e";
+    style.borderRadius = "4px";
+    style.overflow = "auto";
+    style.padding = "10px";
+    style.flexDirection = "column";
+    style.gap = "10px";
+    style.width = "75vw";
+    style.height = "400px";
+    
+    return p;
+  }
+  
+  function text(str) {
+    const text = document.createElement("span");
+    const style = text.style;
+    
+    style.color = "#fff";
+    style.fontSize = "13px";
+    
+    text.innerText = str;
+    
+    return text;
+  }
+  
+  function input() {
+    const i = document.createElement("input");
+    const style = i.style;
+    
+    style.background = "rgba(255, 255, 255, 6%)";
+    style.outline = "none";
+    style.border = "none";
+    style.borderBottom = "1px solid rgba(255, 255, 255, 10%)";
+    style.borderRadius = "4px";
+    style.padding = "10px 20px";
+    style.width = "100%";
+    style.color = "#FFF";
+    
+    return i;
+  }
+  
+  function button(str) {
+    const btn = document.createElement("button");
+    const style = btn.style;
+    
+    btn.innerText = str;
+    
+    style.color = "#00FFA3";
+    style.padding = "10px 20px";
+    style.background = "rgba(255, 255, 255, 6%)";
+    style.border = "none";
+    style.borderRadius = "4px";
+    
+    return btn;
+  }
+  
+  function column() {
+    const c = document.createElement("div");
+    const style = c.style;
+    
+    style.display = "flex";
+    style.gap = "10px";
+    style.flexDirection = "column";
+    
+    return c;
+  }
+  
+  function row() {
+    const r = column();
+    r.style.flexDirection = "row";
+    r.style.width = "100%";
+    r.style.justifyContent = "space-between";
+    r.style.alignItems = "center";
+    
+    return r;
+  }
+  
+  function setting(name, callback, type = "string") {
+    const rows = column();
+    rows.appendChild(text(name));
+    
+    const field = row();
+    const i = input();
+    const save = button("Save");
+    const toggle = button("Disabled");
+    
+    let state = type == "string" ? true : false;
 
-resolver.answer_all_engine();
+    if (type == "boolean" || type == "boolean-only")
+      field.appendChild(toggle);
+    if (type != "boolean-only")
+      field.appendChild(i);
+    
+    function apply() {
+      if (state) {
+        toggle.innerText = "Enabled";
+        i.style.opacity = "1";
+        i.style.pointerEvents = "all";
+      } else {
+        toggle.innerText = "Disabled";
+        i.style.opacity = "0.6";
+        i.style.pointerEvents = "none";
+      }
+    }
+    
+    apply();
+    
+    toggle.addEventListener("click", () => {
+      state = !state;
+      
+      apply();
+      
+      callback(state);
+    });
+      
+    if (type != "boolean-only") {
+      field.appendChild(save);
+    }
+    
+    rows.appendChild(field);
+    
+    save.addEventListener("click", () => {
+      callback(i.value);
+    });
+    
+    return rows;
+  }
+  
+  const tb = row();
+  const start = button("Start");
+  
+  tb.appendChild(text("Google Forms Automatic Completion Manager"));
+  tb.appendChild(start);
+  
+  const cp = panel();
+  
+  const config = {
+    constant_order: false
+  }
+  
+  cp.appendChild(tb);
+  
+  cp.appendChild(setting("Quizlet URLs (Semicolon Separation)", (d) => {
+  }));
+  
+  cp.appendChild(setting("Enable Chat GPT Fallback", (d) => {
+  }, "boolean-only"));
+  
+  cp.appendChild(setting("Enable XUSYNC Execution", (d) => {
+  }, "boolean-only"));
+  
+  cp.appendChild(setting("Enable Contant Order Answers", (d) => {
+  }, "boolean"));
+  document.body.appendChild(cp);
+  document.head.innerHTML += `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet"> <style> * { font-family: 'JetBrains Mono', monospace; }</style>`;
 }
