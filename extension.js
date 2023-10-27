@@ -49,6 +49,8 @@
 			const response_dat = form.children[0].children[1];
             const ques_dat = form.children[0].children[0];
 
+            this.options = [];
+
 			if (response_dat != undefined) {
                 try {
                     const inner_resp = response_dat.children[1].children[0].children[0].children[0];
@@ -167,17 +169,17 @@
 
             if (this.mode == "provided") {
                 if (question.mode == "boolean") {
-                    console.log("Answering Question: DID NOT FETCH");
+                    console.log(`Answering Question: ${this.title}`);
                     console.log(`-- Mode: ${this.mode} [boolean]; QM = ${question.mode}`);
                     console.log(`-- Answer: ${this.left[this.a_pointer] == "True"}`);
                     code = question.answer_boolean(this.left[this.a_pointer] == "True");
                 } else if (question.mode == "ABCD") {
-                    console.log("Answering Question: DID NOT FETCH");
+                    console.log(`Answering Question: ${this.title}`);
                     console.log(`-- Mode: ${this.mode} [ABCD]`);
                     console.log(`-- Answer: ${this.left[this.a_pointer]}`);
                     code = question.answer_abcd(this.left[this.a_pointer]);
                 } else if (question.mode = "string") {
-                    console.log("Answering Question: DID NOT FETCH");
+                    console.log(`Answering Question: ${this.title}`);
                     console.log(`-- Mode: ${this.mode} [STRVAL]`);
                     console.log(`-- Answer: ${this.left[this.a_pointer]}`);
                     code = question.answer_string(this.left[this.a_pointer]);
@@ -193,35 +195,40 @@
                 this.answer();
             });
         }
+
+        // Requester: (query, options, type) => boolean | string
+        answer_all_engine() {
+            this.questions.forEach((question, index) => {
+                if (!question.title)
+                    return console.error(`-- Exception: Question ${index + 1} could not be parsed, skipping`);
+
+                const result = this.left(
+                    question.title,
+                    question.mode == "ABCD" ? question.options.splice(0, 4) : question.options,
+                    question.mode
+                );
+
+                console.log(`Attempting to answer question "${question.title}"`);
+                console.log(`-- Mode: ${question.mode}`);
+                console.log(`-- Options: ${question.options.join(", ")}`);
+                console.log(`-- Fetched answer: "${result}"`);
+
+                switch (question.mode) {
+                    case "boolean":
+                        question.answer_boolean(result);
+                        break;
+
+                    case "ABCD":
+                        question.answer_abcd(result);
+                        break;
+
+                    case "string":
+                        question.answer_string(result);
+                        break;
+                }
+            });
+        }
     }
-
-    let provider = `T
-T
-F
-T
-F
-T
-F
-T
-T
-T
-F
-F
-F
-F
-T`.split("\n");
-
-let temp = [];
-
-provider.forEach((t) => {
-    if (t == "T") {
-        temp.push("True");
-    } else {
-        temp.push("False");
-    }
-})
-
-provider = temp;
 
 class ChatGPT_AI {
     constructor() {
@@ -281,17 +288,16 @@ const questions = get_questions();
 //     resolver.answer_all();
 // });
 
-questions.forEach((question, i) => {
-    if (i == 0) {
-        question.answer_string("based");
+// Requester: (query, options, type) => boolean | string
+const resolver = new QuestionResolver(questions, "provided", (query, options, type) => {
+    if (type == "boolean") {
+        return true;
+    } else if (type == "string") {
+        return "ultra based";
+    } else {
+        return "asdsd";
     }
+});
 
-    if (i == 1) {
-        question.answer_boolean(true);
-    }
-
-    if (i == 2) {
-        question.answer_abcd("asdsd");
-    }
-})
+resolver.answer_all_engine();
 }
