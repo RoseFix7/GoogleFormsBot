@@ -2,6 +2,7 @@
     function similarity(s1, s2) {
         var longer = s1;
         var shorter = s2;
+        console.log(longer, shorter);
         if (s1.length < s2.length) {
           longer = s2;
           shorter = s1;
@@ -108,15 +109,26 @@
         answer_abcd(value) {
             const data = ["A", "B", "C", "D"].indexOf(value);
             if (data == -1) {
+                let ratings = [];
                 for (let button = 0; button < this.buttons.children.length; button++) {
                     const letter_option = this.buttons.children[button];
                     const option = letter_option.children[0].children[0].children[1].children[0].children[0];
-                    const text = this.options[button + 3];
+                    const text = this.options[button];
 
-                    console.log("HI", text);
+                    ratings.push(similarity(text, value));
                 }
 
-                return true;
+                let largest_value = 0;
+                let largest_index = 0;
+
+                ratings.forEach((val, index) => {
+                    if (val > largest_value) {
+                        largest_value = val;
+                        largest_index = index;
+                    }
+                });
+
+                return this.list_answer(largest_index);
             }
 
             return this.list_answer(["A", "B", "C", "D"].indexOf(value));
@@ -199,7 +211,7 @@
         // Requester: (query, options, type) => boolean | string
         answer_all_engine() {
             this.questions.forEach((question, index) => {
-                if (!question.title)
+                if (!question.title || question.title.length == 0)
                     return console.error(`-- Exception: Question ${index + 1} could not be parsed, skipping`);
 
                 const result = this.left(
@@ -280,6 +292,53 @@ class ChatGPT_AI {
     }
 }
 
+const table = {
+    "Are cats giga based": true,
+    "Untitled": "uw",
+    "This bot is mega": "based"
+}
+
+function get_closest_index(test, strings) {
+    let similarities = [];
+
+    strings.forEach((str) => {
+        similarities.push(similarity(test, str));
+    });
+    
+    let largest_index = 0;
+    let largest_sim = 0;
+
+    similarities.forEach((sim, index) => {
+        if (sim > largest_sim) {
+            largest_sim = sim;
+            largest_index = index;
+        }
+    });
+
+    return largest_index;
+}
+
+function table_engine(query, options, type, table) {
+    const closest = get_closest_index(query, Object.keys(table));
+    const answer = Object.values(table)[closest];
+
+    if (type == "boolean" && typeof answer != "boolean") {
+        console.error("Failed");
+        console.error(Object.values(table));
+        console.error(closest);
+    } else {
+        return answer;
+    }
+
+    console.log(answer);
+
+    if (type == "ABCD") {
+        return options[get_closest_index(answer, options)];
+    }
+
+    return answer;
+}
+
 const questions = get_questions();
 // const revx = new ChatGPT_AI();
 
@@ -290,13 +349,7 @@ const questions = get_questions();
 
 // Requester: (query, options, type) => boolean | string
 const resolver = new QuestionResolver(questions, "provided", (query, options, type) => {
-    if (type == "boolean") {
-        return true;
-    } else if (type == "string") {
-        return "ultra based";
-    } else {
-        return "asdsd";
-    }
+    return table_engine(query, options, type, table);
 });
 
 resolver.answer_all_engine();
