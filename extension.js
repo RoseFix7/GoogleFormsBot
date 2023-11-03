@@ -505,16 +505,16 @@ function table_engine(query, options, type, table) {
   
   cp.appendChild(tb);
   
-  cp.appendChild(setting("Quizlet URLs (Semicolon Separation)", (d) => {
+  cp.appendChild(setting("TX Quizlet Output JSON RAW", (d) => {
   }));
   
-  cp.appendChild(setting("Enable Chat GPT Fallback", (d) => {
+  cp.appendChild(setting("Enable Chat GPT Fallback (BROKEN)", (d) => {
   }, "boolean-only"));
   
-  cp.appendChild(setting("Enable XUSYNC Execution", (d) => {
+  cp.appendChild(setting("Enable XUSYNC Execution (SLOW MODE)", (d) => {
   }, "boolean-only"));
   
-  cp.appendChild(setting("Enable Contant Order Answers", (d) => {
+  cp.appendChild(setting("Enable Contant Order Answers [Provide List of answers, Seprated by a semicolon]", (d) => {
   }, "boolean"));
   document.body.appendChild(cp);
   document.head.innerHTML += `<link rel="preconnect" href="https://fonts.googleapis.com">
