@@ -360,9 +360,8 @@ function table_engine(query, options, type, table) {
     
     style.display = "flex";
     style.position = "fixed";
-    style.top = "50vh";
-    style.left = "50vw";
-    style.transform = "translate(-50%, -50%)";
+    style.top = "0vh";
+    style.left = "0vw";
     
     style.background = "#0e0e0e";
     style.borderRadius = "4px";
@@ -370,8 +369,8 @@ function table_engine(query, options, type, table) {
     style.padding = "10px";
     style.flexDirection = "column";
     style.gap = "10px";
-    style.width = "75vw";
-    style.height = "400px";
+    style.width = "100vw";
+    style.height = "100vh";
     
     return p;
   }
@@ -436,6 +435,7 @@ function table_engine(query, options, type, table) {
     r.style.width = "100%";
     r.style.justifyContent = "space-between";
     r.style.alignItems = "center";
+    r.style.borderRadius = "4px";
     
     return r;
   }
@@ -448,7 +448,7 @@ function table_engine(query, options, type, table) {
     const rows = column();
     rows.appendChild(text(name));
     
-    let data_filled = ["Hello", "World"];
+    let data_filled = [];
     const data_elements = column();
     
     function load_list() {
@@ -457,7 +457,17 @@ function table_engine(query, options, type, table) {
       
       data_filled.forEach((data, index) => {
         const delete_btn = button("Delete");
-        const value = text(data);
+        
+        let data_parsed = data.substring(0, 50);
+        
+        const d_length = data.length;
+        const dp_length = data_parsed.length;
+        
+        if (dp_length < d_length) {
+          data_parsed += "...";
+        }
+        
+        const value = text(data_parsed);
         
         const container = row();
         container.appendChild(value);
@@ -470,6 +480,11 @@ function table_engine(query, options, type, table) {
         }
         
         container.style.padding = "10px";
+        
+        delete_btn.addEventListener("click", () => {
+          data_filled.splice(index, 1);
+          load_list();
+        });
         
         data_elements.appendChild(container);
       });
@@ -545,7 +560,10 @@ function table_engine(query, options, type, table) {
     
     save.addEventListener("click", () => {
       if (list_mode) {
+        data_filled.push(i.value);
+        i.value = "";
         
+        load_list();
       } else if (state) {
         callback(i.value);
       }
