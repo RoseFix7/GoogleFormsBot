@@ -410,7 +410,7 @@ function table_engine(query, options, type, table) {
     
     btn.innerText = str;
     
-    style.color = "#00FFA3";
+    style.color = "#FFF";
     style.padding = "10px 20px";
     style.background = "rgba(255, 255, 255, 6%)";
     style.border = "none";
@@ -441,17 +441,62 @@ function table_engine(query, options, type, table) {
   }
   
   function setting(name, callback, type = "string") {
+    const super_parent = column();
+        let state = type == "string" ? true : false;
+
+    
     const rows = column();
     rows.appendChild(text(name));
     
+    let data_filled = ["Hello", "World"];
+    const data_elements = column();
+    
+    function load_list() {
+      data_elements.innerHTML = "";
+      data_elements.style.gap = "1px";
+      
+      data_filled.forEach((data, index) => {
+        const delete_btn = button("Delete");
+        const value = text(data);
+        
+        const container = row();
+        container.appendChild(value);
+        container.appendChild(delete_btn);
+               
+        if (state) {
+          container.style.background = "rgba(255, 255, 255, 6%)";
+        } else {
+          container.style.background = "rgba(255, 255, 255, 20%)";
+        }
+        
+        container.style.padding = "10px";
+        
+        data_elements.appendChild(container);
+      });
+    }
+    
+    load_list();
+    
     const field = row();
     const i = input();
-    const save = button("Save");
+    const save = button(type == "list" || type == "list-boolean" ? "Add" : "Save");
     const toggle = button("Disabled");
+       
+    const list_mode = type == "list" || type == "list-boolean";
+    const boolean_mode = type == "list-boolean" || type == "boolean" || type == "boolean-only";
     
-    let state = type == "string" ? true : false;
+    if (!boolean_mode) {
+      state = true;
+      apply();
+    }
+    
+    if (list_mode) {
+      i.placeholder = "Enter Element Text";
+    } else {
+      i.placeholder = "Value";
+    }
 
-    if (type == "boolean" || type == "boolean-only")
+    if (type == "boolean" || type == "boolean-only" || type == "list-boolean")
       field.appendChild(toggle);
     if (type != "boolean-only")
       field.appendChild(i);
@@ -461,11 +506,25 @@ function table_engine(query, options, type, table) {
         toggle.innerText = "Enabled";
         i.style.opacity = "1";
         i.style.pointerEvents = "all";
+        data_elements.style.opacity = "1";
+        data_elements.style.pointerEvents = "all";
+
+        toggle.style.color = "#50FFAB";
+        save.style.color = "#FFF";
+        save.style.background = "rgba(255, 255, 255, 6%)";
       } else {
         toggle.innerText = "Disabled";
         i.style.opacity = "0.6";
         i.style.pointerEvents = "none";
+        data_elements.style.opacity = "0.6";
+        data_elements.style.pointerEvents = "none";
+
+        toggle.style.color = "#FF0060";
+        save.style.color = "#777";
+        save.style.background = "rgba(255, 255, 255, 20%)";
       }
+      
+      load_list();
     }
     
     apply();
@@ -485,10 +544,20 @@ function table_engine(query, options, type, table) {
     rows.appendChild(field);
     
     save.addEventListener("click", () => {
-      callback(i.value);
+      if (list_mode) {
+        
+      } else if (state) {
+        callback(i.value);
+      }
     });
     
-    return rows;
+    super_parent.appendChild(rows);
+    
+    if (list_mode) {
+      super_parent.appendChild(data_elements);
+    }
+    
+    return super_parent;
   }
   
   const tb = row();
@@ -506,7 +575,10 @@ function table_engine(query, options, type, table) {
   cp.appendChild(tb);
   
   cp.appendChild(setting("TX Quizlet Output JSON RAW", (d) => {
-  }));
+  }, "list"));
+  
+  cp.appendChild(setting("TX Quizlet Output JSON RAW", (d) => {
+  }, "list-boolean"));
   
   cp.appendChild(setting("Enable Chat GPT Fallback (BROKEN)", (d) => {
   }, "boolean-only"));
@@ -519,5 +591,5 @@ function table_engine(query, options, type, table) {
   document.body.appendChild(cp);
   document.head.innerHTML += `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet"> <style> * { font-family: 'JetBrains Mono', monospace; }</style>`;
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet"> <style> * { font-family: 'JetBrains Mono', monospace; } * { box-sizing: border-box; transition: 150ms; }</style>`;
 }
