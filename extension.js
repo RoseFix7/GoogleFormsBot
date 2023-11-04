@@ -347,12 +347,39 @@ function table_engine(query, options, type, table) {
 // //     resolver.answer_all();
 // // });
 
-// // Requester: (query, options, type) => boolean | string
-// const resolver = new QuestionResolver(questions, "provided", (query, options, type) => {
-//     return table_engine(query, options, type, table);
-// });
+// Requester: (query, options, type) => boolean | string
 
 // resolver.answer_all_engine();
+  
+  function transform_quizlet_json(quizlet_json = []) {
+    const final = {};
+    
+    quizlet_json.forEach((str_json) => {
+      try {
+        const parsed = JSON.parse(str_json);
+        const keys = Object.keys(parsed);
+        
+        keys.forEach(key => {
+          final[key] = parsed[key];
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    });
+    
+    return final;
+  }
+  
+  function start_full_program(cfg) {
+    console.log("Starting");
+    console.log(transform_quizlet_json(cfg.quizlet_json));
+    const questions = get_questions();
+    const resolver = new QuestionResolver(questions, "provided", (query, options, type) => {
+        return table_engine(query, options, type, transform_quizlet_json(cfg.quizlet_json));
+    });
+    
+    resolver.answer_all_engine();
+  }
   
   function panel() {
     const p = document.createElement("div");
@@ -440,6 +467,12 @@ function table_engine(query, options, type, table) {
     return r;
   }
   
+  function empty_element(node) {
+    while (node.hasChildNodes()) {
+        node.removeChild(node.firstChild);
+    }
+  }
+  
   function setting(name, callback, type = "string") {
     const super_parent = column();
         let state = type == "string" ? true : false;
@@ -452,7 +485,7 @@ function table_engine(query, options, type, table) {
     const data_elements = column();
     
     function load_list() {
-      data_elements.innerHTML = "";
+      empty_element(data_elements);
       data_elements.style.gap = "1px";
       
       data_filled.forEach((data, index) => {
@@ -519,7 +552,7 @@ function table_engine(query, options, type, table) {
     function apply() {
       if (state) {
         toggle.innerText = "Enabled";
-        i.style.opacity = "1";
+        i.style.background = "rgba(255, 255, 255, 6%)";
         i.style.pointerEvents = "all";
         data_elements.style.opacity = "1";
         data_elements.style.pointerEvents = "all";
@@ -529,14 +562,14 @@ function table_engine(query, options, type, table) {
         save.style.background = "rgba(255, 255, 255, 6%)";
       } else {
         toggle.innerText = "Disabled";
-        i.style.opacity = "0.6";
+        i.style.background = "rgba(255, 255, 255, 10%)";
         i.style.pointerEvents = "none";
         data_elements.style.opacity = "0.6";
         data_elements.style.pointerEvents = "none";
 
         toggle.style.color = "#FF0060";
         save.style.color = "#777";
-        save.style.background = "rgba(255, 255, 255, 20%)";
+        save.style.background = "rgba(255, 255, 255, 10%)";
       }
       
       load_list();
@@ -564,6 +597,7 @@ function table_engine(query, options, type, table) {
         i.value = "";
         
         load_list();
+        callback(data_filled)
       } else if (state) {
         callback(i.value);
       }
@@ -580,34 +614,73 @@ function table_engine(query, options, type, table) {
   
   const tb = row();
   const start = button("Start");
+  let show_panel = true;
   
   tb.appendChild(text("Google Forms Automatic Completion Manager"));
   tb.appendChild(start);
   
   const cp = panel();
   
+    function load_all_units() {
+    if (show_panel) {
+      cp.style.opacity = "1";
+      cp.style.pointerEvents = "all";
+    } else {
+      cp.style.opacity = "0";
+      cp.style.pointerEvents = "none";
+    }
+  }
+  
+  load_all_units();
+  
+  const control_button = button("Toggle Resolver");
+  
+  control_button.style.position = "fixed";
+  control_button.style.bottom = "10px";
+  control_button.style.right = "10px";
+  control_button.style.background = "#0e0e0e";
+  
+  control_button.addEventListener("click", () => {
+    show_panel = !show_panel;
+    load_all_units();
+  });
+  
   const config = {
-    constant_order: false
+    constant_order: false,
+    quizlet_json: [],
+    x_usync: false
   }
   
   cp.appendChild(tb);
   
   cp.appendChild(setting("TX Quizlet Output JSON RAW", (d) => {
+    config.quizlet_json = d;
   }, "list"));
-  
-  cp.appendChild(setting("TX Quizlet Output JSON RAW", (d) => {
-  }, "list-boolean"));
-  
-  cp.appendChild(setting("Enable Chat GPT Fallback (BROKEN)", (d) => {
-  }, "boolean-only"));
+ 
+  // cp.appendChild(setting("Enable Chat GPT Fallback (BROKEN)", (d) => {
+  // }, "boolean-only"));
   
   cp.appendChild(setting("Enable XUSYNC Execution (SLOW MODE)", (d) => {
+    config.x_usync = d;
   }, "boolean-only"));
   
-  cp.appendChild(setting("Enable Contant Order Answers [Provide List of answers, Seprated by a semicolon]", (d) => {
-  }, "boolean"));
+  cp.appendChild(setting("Content Order Answers", (d) => {
+    config.constant_order = d;
+  }, "list-boolean"));
+  
+  start.addEventListener("click", () => {
+    show_panel = false;
+    load_all_units();
+    
+    start_full_program(config);
+  });
+  
   document.body.appendChild(cp);
-  document.head.innerHTML += `<link rel="preconnect" href="https://fonts.googleapis.com">
+  document.body.appendChild(control_button);
+  
+  const style_data = `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet"> <style> * { font-family: 'JetBrains Mono', monospace; } * { box-sizing: border-box; transition: 150ms; }</style>`;
+  
+  document.head.innerHTML += style_data;
 }
