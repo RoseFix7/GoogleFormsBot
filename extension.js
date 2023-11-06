@@ -414,6 +414,18 @@ function table_engine(query, options, type, table) {
     return text;
   }
   
+  function pre_text(str) {
+    const text = document.createElement("pre");
+    const style = text.style;
+    
+    style.color = "#fff";
+    style.fontSize = "13px";
+    
+    text.innerText = str;
+    
+    return text;
+  }
+  
   function input() {
     const i = document.createElement("input");
     const style = i.style;
@@ -473,9 +485,11 @@ function table_engine(query, options, type, table) {
     }
   }
   
-  function setting(name, callback, type = "string") {
+  function setting(name, callback, type = "string", default_value = false, select_obj = []) {
     const super_parent = column();
-        let state = type == "string" ? true : false;
+        let state = type == "string" ? true : default_value;
+    
+    let current_select = default_value + "";
 
     
     const rows = column();
@@ -483,6 +497,36 @@ function table_engine(query, options, type, table) {
     
     let data_filled = [];
     const data_elements = column();
+    const select_elements = column();
+    
+    function load_select() {
+      empty_element(select_elements);
+      select_elements.style.gap = "1px";
+      
+      select_obj.forEach((opt) => {
+        const opt_el = row();
+        const label = text(opt);
+        
+        opt_el.appendChild(label);
+        
+        opt_el.style.background = "rgba(255, 255, 255, 6%)";
+        opt_el.style.padding = "10px";
+        
+        if (current_select == opt) {
+          opt_el.style.background = "#FF004D";
+          label.style.color = "#0b0b0b";
+        }
+        
+        opt_el.addEventListener("click", () => {
+          current_select = opt;
+          load_select();
+          
+          callback(opt);
+        });
+        
+        select_elements.appendChild(opt_el);
+      });
+    }
     
     function load_list() {
       empty_element(data_elements);
@@ -495,16 +539,60 @@ function table_engine(query, options, type, table) {
         
         const d_length = data.length;
         const dp_length = data_parsed.length;
+        const expand = button("Expand");
+        
+        let overflow = false;
+        let overflow_shown = false;
         
         if (dp_length < d_length) {
+          overflow = true;
           data_parsed += "...";
         }
         
-        const value = text(data_parsed);
+        
+        const value = pre_text(data_parsed);
+        
+        try {
+          JSON.parse(data);
+          value.style.color = "#FFF";
+        } catch (e) {
+          value.style.color = "#FF004D";
+        }
+        
+        function apply_ov() {
+          if (overflow_shown) {
+            expand.innerText = "Compact";
+            try {
+              value.innerText = JSON.stringify(JSON.parse(data), '\n', '\t');
+            } catch (e) {
+              value.innerText = data;
+            }
+          } else {
+            expand.innerText = "Expand";
+            value.innerText = data_parsed;
+          }
+        }
+        
+        apply_ov();
+        
+        expand.addEventListener("click", () => {
+          overflow_shown = !overflow_shown;
+          apply_ov();
+        });
         
         const container = row();
         container.appendChild(value);
-        container.appendChild(delete_btn);
+        
+        const buttons = row();
+        
+        buttons.style.justifyContent = "flex-end";
+        
+        if (overflow) {
+          buttons.appendChild(expand);
+        }
+        buttons.appendChild(delete_btn);
+        
+        container.appendChild(buttons);
                
         if (state) {
           container.style.background = "rgba(255, 255, 255, 6%)";
@@ -524,6 +612,7 @@ function table_engine(query, options, type, table) {
     }
     
     load_list();
+    load_select();
     
     const field = row();
     const i = input();
@@ -531,7 +620,8 @@ function table_engine(query, options, type, table) {
     const toggle = button("Disabled");
        
     const list_mode = type == "list" || type == "list-boolean";
-    const boolean_mode = type == "list-boolean" || type == "boolean" || type == "boolean-only";
+    const select_mode = type == "select" || type == "select-boolean";
+    const boolean_mode = type == "list-boolean" || type == "boolean" || type == "boolean-only" || type == "select-boolean";
     
     if (!boolean_mode) {
       state = true;
@@ -546,7 +636,7 @@ function table_engine(query, options, type, table) {
 
     if (type == "boolean" || type == "boolean-only" || type == "list-boolean")
       field.appendChild(toggle);
-    if (type != "boolean-only")
+    if (type != "boolean-only" && !select_mode)
       field.appendChild(i);
     
     function apply() {
@@ -585,13 +675,13 @@ function table_engine(query, options, type, table) {
       callback(state);
     });
       
-    if (type != "boolean-only") {
+    if (!(boolean_mode && !select_mode && !list_mode) && !select_mode) {
       field.appendChild(save);
     }
     
     rows.appendChild(field);
     
-    save.addEventListener("click", () => {
+    function click_event() {
       if (list_mode) {
         data_filled.push(i.value);
         i.value = "";
@@ -601,12 +691,28 @@ function table_engine(query, options, type, table) {
       } else if (state) {
         callback(i.value);
       }
+    }
+    
+    save.addEventListener("click", () => {
+      click_event();
     });
     
     super_parent.appendChild(rows);
     
     if (list_mode) {
       super_parent.appendChild(data_elements);
+    } else if (select_mode) {
+      super_parent.appendChild(select_elements);
+    }
+    
+    if (list_mode) {
+      callback(data_filled)
+    } else if (boolean_mode) {
+      callback(state);
+    } else if (select_mode) {
+      callback(current_select);
+    } else  {
+      callback(i.value);
     }
     
     return super_parent;
@@ -645,10 +751,16 @@ function table_engine(query, options, type, table) {
     load_all_units();
   });
   
+  
+  const config_formed = pre_text("...");
+  
   const config = {
     constant_order: false,
     quizlet_json: [],
-    x_usync: false
+    x_usync: false,
+    filter: false,
+    long_order: false,
+    fault_behavior: "Ask For Answer"
   }
   
   cp.appendChild(tb);
@@ -660,13 +772,29 @@ function table_engine(query, options, type, table) {
   // cp.appendChild(setting("Enable Chat GPT Fallback (BROKEN)", (d) => {
   // }, "boolean-only"));
   
-  cp.appendChild(setting("Enable XUSYNC Execution (SLOW MODE)", (d) => {
-    config.x_usync = d;
-  }, "boolean-only"));
+  cp.appendChild(setting("[Recommended for Engineering Quizlets] Use longests value as question, shortest as answer", (d) => {
+    config.long_order = d;
+  }, "boolean-only", true));
+  
+  cp.appendChild(setting("[Recommended for Engineering Quizlets] Filter only alphanumeric charachters (A-Z;a-z;0-9)", (d) => {
+    config.filter = d;
+  }, "boolean-only", true));
+  
+    cp.appendChild(setting("Enable XUSYNC Execution (SLOW MODE)", (d) => {
+      config.x_usync = d;
+    }, "boolean-only"));
   
   cp.appendChild(setting("Content Order Answers", (d) => {
     config.constant_order = d;
   }, "list-boolean"));
+  
+  cp.appendChild(setting("Answer fault resolution behavior", (d) => {
+    config.fault_behavior = d;
+  }, "select", "Ask For Answer", [
+    "Ask For Answer",
+    "Pause",
+    "Select First Option"
+  ]));
   
   start.addEventListener("click", () => {
     show_panel = false;
@@ -674,6 +802,23 @@ function table_engine(query, options, type, table) {
     
     start_full_program(config);
   });
+  
+  const get_config_rendered = button("Get Run Object");
+  
+  get_config_rendered.addEventListener("click", () => {
+    let parsed = "...";
+    try {
+      parsed = JSON.stringify(config, "\n", "\t");
+      config_formed.style.color = "#FFF";
+    } catch (e) {
+      config_formed.style.color = "red";
+    }
+    
+    config_formed.innerText = parsed;
+  });
+  
+  cp.appendChild(get_config_rendered);
+  cp.appendChild(config_formed);
   
   document.body.appendChild(cp);
   document.body.appendChild(control_button);
