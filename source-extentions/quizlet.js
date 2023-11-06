@@ -1,5 +1,5 @@
 {
-    const answers = document.querySelectorAll("#setPageSetDetails > div.SetPage-setDetailsTermsWrapper > div > div:nth-child(2) > div > section > div > section > .SetPageTerms-term");
+    const answers = document.querySelectorAll(".SetPageTerms-term");
     let output = {};
     
     answers.forEach((term) => {
