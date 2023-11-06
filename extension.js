@@ -210,12 +210,17 @@
         set_fault_handler(handler) {
           this.handle_fault = handler; 
         }
+      
+        resume(index) {
+          const questions = this.questions.filter((_, i) => i >= index);
+          this.answer_all_engine(questions, index);
+        }
 
         // Requester: (query, options, type) => boolean | string
-        answer_all_engine() {
+        answer_all_engine(q_array = null, trick_offset = 0) {
           let halt = false;
           let halt_trace = null;
-            this.questions.forEach((question, index) => {
+            (q_array != null ? q_array : this.questions).forEach((question, index) => {
               if (halt) {
                 return;
               }
@@ -234,7 +239,7 @@
               halt_trace = {
                 result: result_x,
                 question,
-                index
+                index: index + trick_offset
               }
                             
               if (result_x.failed) {
@@ -474,32 +479,109 @@ function table_engine(query, options, type, table, threash = 0.0) {
       }  
     }
     
-    
     const questions = get_questions();
-    const resolver = new QuestionResolver(questions, "provided", (query, options, type) => {
+    const resolver = new QuestionResolver(questions.filter(q => q.title && q.title.length > 0), "provided", (query, options, type) => {
         return table_engine(query, options, type, quizlet_data, cfg.threash);
     });
     
     resolver.set_fault_handler((trace) => {
+      // Behaviors
+      // "Ask For Answer"
+      // "Reset"
+      // "Select First Option"
+      // "Random Pick"
+      
       const { index, result, question } = trace;
       
       const error = column();
       
-      console.log(trace);
-      
       const lines = [
         text("ERROR! Question resolution fault"),
         text(`Question: ${question.title}`),
-        text(`Identifier: ${index} (Approximate)`),
+        text(`Identifier: ${index}`),
         text(`Closest answer: ${result.value} (Approximate Accuracy: ${(result.sim * 100).toString().slice(0, 4)}%`)
-      ]
+      ];
       
       lines.forEach(line => error.appendChild(line));
+      error.appendChild(br());
+      
+      let flash_state = true;
+      let loop = 0;
+      
+      function flash_loop() {
+        const root = question.root.children[0].children[0];
+        
+        if (flash_state) {
+          root.style.background = "#FF004D09";
+          root.style.borderColor = "#FF004D";
+        } else {
+          root.style.background = "#FFFFFF";
+          root.style.borderColor = "#dadce0";
+        }
+        
+        flash_state = !flash_state;
+      }
+      
+      function start_flash() {
+        loop = setInterval(flash_loop, 500);
+      }
+      
+      function stop_flash() {
+        clearInterval(loop);
+      }
+      
+      const action_row = row();
+      
+      const submit = button("Resolve");
+      action_row.style.justifyContent = "flex-end";
+      
+      function clean() {
+        dismiss_EM();
+        stop_flash();
+        flash_state = false;
+        flash_loop();
+      }
+      
+      {
+        start_flash();
+        question.root.scrollIntoView();
+        
+          // function setting(name, callback, type = "string", default_value = false, select_obj = []) {
+        if (cfg.fault_behavior == "Ask For Answer") {
+          if (question.mode == "boolean") {
+            const select = setting(question.title, (d) => {
+              
+            }, "select", "True", [ "True", "False" ]);
+            
+            error.appendChild(select);
+          } else if (question.mode == "ABCD") {
+            
+          } else if (question.mode == "string") {
+            
+          } else {
+            const error_res = text("Malformed question object, please report this bug to Rayyan!");
+          }
+        }
+      }
+      
+      submit.addEventListener("click", () => {
+        clean();
+        question.answer_boolean(true); // TODO: Fix
+        resolver.resume(index + 1);
+      });
+      
+      const close = button("Close");
+          
+      close.addEventListener("click", () => {
+        clean();
+      });
+      
+      action_row.appendChild(close);
+      action_row.appendChild(submit);
+
+      error.appendChild(action_row);
 
       spawn_EM(error, true);
-      
-      show_panel = true;
-      load_all_units();
     });
     
     resolver.answer_all_engine();
@@ -854,6 +936,10 @@ function table_engine(query, options, type, table, threash = 0.0) {
     return super_parent;
   }
   
+  function br() {
+    return document.createElement("br");
+  }
+  
   const E_MODAL = panel();
   const emt = text("Error??")
   
@@ -991,7 +1077,7 @@ function table_engine(query, options, type, table, threash = 0.0) {
     config.fault_behavior = d;
   }, "select", "Ask For Answer", [
     "Ask For Answer",
-    "Pause",
+    "Reset",
     "Select First Option",
     "Random Pick"
   ]));
