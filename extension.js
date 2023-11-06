@@ -370,15 +370,45 @@ function table_engine(query, options, type, table) {
     return final;
   }
   
+  function transform_order(obj) {
+    const keys = Object.keys(obj);
+    let result = {};
+    
+    keys.forEach((key) => {
+      if (key.length < (obj[key] + "").length) {
+        result[obj[key] + ""] = key + "";
+        
+        if (result[obj[key]] == "true") {
+          result[obj[key]] = true;
+        } else if (result[obj[key]] == "false") {
+          result[obj[key]] = false;
+        }
+      } else {
+        result[key] = obj[key];
+      }
+    })
+    
+    return result;
+  }
+  
   function start_full_program(cfg) {
-    console.log("Starting");
-    console.log(transform_quizlet_json(cfg.quizlet_json));
+    let quizlet_data = transform_quizlet_json(cfg.quizlet_json);
+    
+    // Long order
+    {
+      if (cfg.long_order) {
+        quizlet_data = transform_order(quizlet_data);
+      }  
+    }
+    
+    
     const questions = get_questions();
     const resolver = new QuestionResolver(questions, "provided", (query, options, type) => {
         return table_engine(query, options, type, transform_quizlet_json(cfg.quizlet_json));
     });
     
-    resolver.answer_all_engine();
+    // resolver.answer_all_engine();
+    console.log(quizlet_data)
   }
   
   function panel() {
@@ -480,7 +510,7 @@ function table_engine(query, options, type, table) {
   }
   
   function empty_element(node) {
-    while (node.hasChildNodes()) {
+    while (node.hasChildNodes()) { 
         node.removeChild(node.firstChild);
     }
   }
@@ -495,7 +525,9 @@ function table_engine(query, options, type, table) {
     const rows = column();
     rows.appendChild(text(name));
     
-    let data_filled = [];
+    let data_filled = [
+      JSON.stringify({ "A pure inductive circuit is an AC circuit with no resistance.": true,"Kirchhoff's voltage law states that the algebraic sum of the voltage in a closed-loop circuit is equal to zero": true, false: "Current in an inductive AC circuit can be calculated without knowing source voltage." })
+    ];
     const data_elements = column();
     const select_elements = column();
     
@@ -748,9 +780,8 @@ function table_engine(query, options, type, table) {
   
   control_button.addEventListener("click", () => {
     show_panel = !show_panel;
-    load_all_units();
+    load_all_units(); //
   });
-  
   
   const config_formed = pre_text("...");
   
@@ -793,7 +824,8 @@ function table_engine(query, options, type, table) {
   }, "select", "Ask For Answer", [
     "Ask For Answer",
     "Pause",
-    "Select First Option"
+    "Select First Option",
+    "Random Pick"
   ]));
   
   start.addEventListener("click", () => {
