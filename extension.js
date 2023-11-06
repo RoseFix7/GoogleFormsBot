@@ -2,7 +2,6 @@
     function similarity(s1, s2) {
         var longer = s1;
         var shorter = s2;
-        console.log(longer, shorter);
         if (s1.length < s2.length) {
           longer = s2;
           shorter = s1;
@@ -91,15 +90,13 @@
                     const inner_resp = ques_dat.children[0].children[0].children[0];
                     this.title = inner_resp.innerText;
                 } catch (e) {
-                    console.log(e);
+                    console.error(e);
                 }
-
-                console.log(this);
 			}
 
-            console.log("Question initialized");
-            console.log(`-- Mode: ${this.mode}`);
-            console.log(`-- Name: ${this.title}`);
+            // console.log("Question initialized");
+            // console.log(`-- Mode: ${this.mode}`);
+            // console.log(`-- Name: ${this.title}`);
 		}
 
         answer_boolean(value) {
@@ -173,6 +170,8 @@
             this.mode = mode;
             this.pointer = 0;
             this.a_pointer = 0;
+          
+          this.handle_fault = () => {};
         }
 
         answer() {
@@ -181,19 +180,19 @@
 
             if (this.mode == "provided") {
                 if (question.mode == "boolean") {
-                    console.log(`Answering Question: ${this.title}`);
-                    console.log(`-- Mode: ${this.mode} [boolean]; QM = ${question.mode}`);
-                    console.log(`-- Answer: ${this.left[this.a_pointer] == "True"}`);
+                    // console.log(`Answering Question: ${this.title}`);
+                    // console.log(`-- Mode: ${this.mode} [boolean]; QM = ${question.mode}`);
+                    // console.log(`-- Answer: ${this.left[this.a_pointer] == "True"}`);
                     code = question.answer_boolean(this.left[this.a_pointer] == "True");
                 } else if (question.mode == "ABCD") {
-                    console.log(`Answering Question: ${this.title}`);
-                    console.log(`-- Mode: ${this.mode} [ABCD]`);
-                    console.log(`-- Answer: ${this.left[this.a_pointer]}`);
+                    // console.log(`Answering Question: ${this.title}`);
+                    // console.log(`-- Mode: ${this.mode} [ABCD]`);
+                    // console.log(`-- Answer: ${this.left[this.a_pointer]}`);
                     code = question.answer_abcd(this.left[this.a_pointer]);
                 } else if (question.mode = "string") {
-                    console.log(`Answering Question: ${this.title}`);
-                    console.log(`-- Mode: ${this.mode} [STRVAL]`);
-                    console.log(`-- Answer: ${this.left[this.a_pointer]}`);
+                    // console.log(`Answering Question: ${this.title}`);
+                    // console.log(`-- Mode: ${this.mode} [STRVAL]`);
+                    // console.log(`-- Answer: ${this.left[this.a_pointer]}`);
                     code = question.answer_string(this.left[this.a_pointer]);
                 }
             }
@@ -207,23 +206,47 @@
                 this.answer();
             });
         }
+      
+        set_fault_handler(handler) {
+          this.handle_fault = handler; 
+        }
 
         // Requester: (query, options, type) => boolean | string
         answer_all_engine() {
+          let halt = false;
+          let halt_trace = null;
             this.questions.forEach((question, index) => {
+              if (halt) {
+                return;
+              }
+                            
                 if (!question.title || question.title.length == 0)
-                    return console.error(`-- Exception: Question ${index + 1} could not be parsed, skipping`);
+                    return console.error(`-- Exception: Question ${index + 1} could not be parsed, skipping. Likly header`);
 
-                const result = this.left(
+                const result_x = this.left(
                     question.title,
                     question.mode == "ABCD" ? question.options.splice(0, 4) : question.options,
                     question.mode
                 );
-
-                console.log(`Attempting to answer question "${question.title}"`);
-                console.log(`-- Mode: ${question.mode}`);
-                console.log(`-- Options: ${question.options.join(", ")}`);
-                console.log(`-- Fetched answer: "${result}"`);
+              
+              const result = result_x.value;
+              
+              halt_trace = {
+                result: result_x,
+                question,
+                index
+              }
+                            
+              if (result_x.failed) {
+                halt = true;
+                this.handle_fault(halt_trace);
+                
+                return;
+              }
+                // console.log(`Attempting to answer question "${question.title}"`);
+                // console.log(`-- Mode: ${question.mode}`);
+                // console.log(`-- Options: ${question.options.join(", ")}`);
+                // console.log(`-- Fetched answer: "${result}"`);
 
                 switch (question.mode) {
                     case "boolean":
@@ -240,6 +263,10 @@
                 }
             });
         }
+      
+      if (halt) {
+        console.error("FAULT")
+      }
     }
 
 class ChatGPT_AI {
@@ -292,12 +319,6 @@ class ChatGPT_AI {
     }
 }
 
-const table = {
-    "Are cats giga based": true,
-    "Untitled": "uw",
-    "This bot is mega": "based"
-}
-
 function get_closest_index(test, strings) {
     let similarities = [];
 
@@ -315,28 +336,58 @@ function get_closest_index(test, strings) {
         }
     });
 
-    return largest_index;
+    return { 
+      value: largest_index,
+      sim: largest_sim
+    };
 }
 
-function table_engine(query, options, type, table) {
-    const closest = get_closest_index(query, Object.keys(table));
+function table_engine(query, options, type, table, threash = 0.0) {
+    const closest_x = get_closest_index(query, Object.keys(table));
+    const closest = closest_x.value;
     const answer = Object.values(table)[closest];
+  
+  console.log(answer);
+  
+    if (closest_x.sim <= threash) {
+      return {
+          value: answer,
+          failed: true,
+          sim: closest_x.sim
+      };
+    }
+  
 
     if (type == "boolean" && typeof answer != "boolean") {
         console.error("Failed");
         console.error(Object.values(table));
         console.error(closest);
+      
+        return {
+          value: answer,
+          failed: true,
+          sim: closest_x.sim
+        };
     } else {
-        return answer;
+        return {
+          value: answer,
+          failed: false,
+          sim: closest_x.sim
+        };
     }
 
-    console.log(answer);
+  console.log("##### INCOMING PACKET #####")
+    // console.log(answer);
 
     if (type == "ABCD") {
         return options[get_closest_index(answer, options)];
     }
 
-    return answer;
+    return {
+      value: answer,
+      failed: true,
+      sim: closest_x.sim
+    };
 }
 
 // const questions = get_questions();
@@ -391,7 +442,29 @@ function table_engine(query, options, type, table) {
     return result;
   }
   
+    let show_panel = true;
+  
   function start_full_program(cfg) {
+    if (cfg.accept != "Accept") {
+      const error = column();
+      
+      const message = text("You may not use this tool until you have indicated your acknowledgment of risks");
+      const close = button("Close");
+      
+      close.addEventListener("click", () => {
+        dismiss_EM();
+      });
+      
+      error.appendChild(message);
+      error.appendChild(close);
+      
+      spawn_EM(error);
+      
+      show_panel = true;
+      load_all_units();
+      return;
+    }
+    
     let quizlet_data = transform_quizlet_json(cfg.quizlet_json);
     
     // Long order
@@ -404,11 +477,32 @@ function table_engine(query, options, type, table) {
     
     const questions = get_questions();
     const resolver = new QuestionResolver(questions, "provided", (query, options, type) => {
-        return table_engine(query, options, type, transform_quizlet_json(cfg.quizlet_json));
+        return table_engine(query, options, type, quizlet_data, cfg.threash);
     });
     
-    // resolver.answer_all_engine();
-    console.log(quizlet_data)
+    resolver.set_fault_handler((trace) => {
+      const { index, result, question } = trace;
+      
+      const error = column();
+      
+      console.log(trace);
+      
+      const lines = [
+        text("ERROR! Question resolution fault"),
+        text(`Question: ${question.title}`),
+        text(`Identifier: ${index} (Approximate)`),
+        text(`Closest answer: ${result.value} (Approximate Accuracy: ${(result.sim * 100).toString().slice(0, 4)}%`)
+      ]
+      
+      lines.forEach(line => error.appendChild(line));
+
+      spawn_EM(error, true);
+      
+      show_panel = true;
+      load_all_units();
+    });
+    
+    resolver.answer_all_engine();
   }
   
   function panel() {
@@ -481,8 +575,16 @@ function table_engine(query, options, type, table) {
     style.color = "#FFF";
     style.padding = "10px 20px";
     style.background = "rgba(255, 255, 255, 6%)";
-    style.border = "none";
+    style.border = "1px solid transparent";
     style.borderRadius = "4px";
+    
+    btn.addEventListener("mouseover", () => {
+      style.border = "1px solid rgba(255, 255, 255, 20%)";
+    });
+    
+    btn.addEventListener("mouseleave", () => {
+      style.border = "1px solid rgba(255, 255, 255, 0%)";
+    });
     
     return btn;
   }
@@ -523,6 +625,7 @@ function table_engine(query, options, type, table) {
 
     
     const rows = column();
+    
     rows.appendChild(text(name));
     
     let data_filled = [
@@ -661,7 +764,7 @@ function table_engine(query, options, type, table) {
     }
     
     if (list_mode) {
-      i.placeholder = "Enter Element Text";
+      i.placeholder = "...";
     } else {
       i.placeholder = "Value";
     }
@@ -744,28 +847,75 @@ function table_engine(query, options, type, table) {
     } else if (select_mode) {
       callback(current_select);
     } else  {
-      callback(i.value);
+      i.value = default_value;
+      callback(default_value);
     }
     
     return super_parent;
   }
   
+  const E_MODAL = panel();
+  const emt = text("Error??")
+  
+  let E_MODAL_OPEN = false;
+  
+  E_MODAL.style.width = "50vw";
+  E_MODAL.style.padding = "10px";
+  E_MODAL.style.height = "initial";
+  E_MODAL.style.top = "50vh";
+  E_MODAL.style.left = "50vw";
+  E_MODAL.style.transform = "translate(-50%, -50%)";
+  E_MODAL.style.border = "1px solid rgba(255, 255, 255, 20%)";
+    
+  E_MODAL.appendChild(emt);
+  
+  function process_EM() {
+    if (E_MODAL_OPEN) {
+      E_MODAL.style.opacity = "1";
+      E_MODAL.style.pointerEvents = "all";
+    } else {
+      E_MODAL.style.opacity = "0";
+      E_MODAL.style.pointerEvents = "none";
+    }
+  }
+  
+  process_EM();
+  
+  function dismiss_EM() {
+    E_MODAL_OPEN = false;
+    process_EM();
+  }
+  
+  function spawn_EM(inner_content, is_error = false) {
+    E_MODAL_OPEN = true;
+    
+    empty_element(E_MODAL);
+    E_MODAL.appendChild(inner_content);
+    
+    if (is_error) {
+      E_MODAL.style.borderColor = "#FF004D";
+    } else {
+      E_MODAL.style.borderColor = "rgba(255, 255, 255, 20%)";
+    }
+     
+    process_EM();
+  }
+    
   const tb = row();
   const start = button("Start");
-  let show_panel = true;
   
   tb.appendChild(text("Google Forms Automatic Completion Manager"));
   tb.appendChild(start);
   
-  const cp = panel();
+  const cpx = panel();
   
     function load_all_units() {
     if (show_panel) {
-      cp.style.opacity = "1";
-      cp.style.pointerEvents = "all";
+      cpx.style.opacity = "1";
+      cpx.style.pointerEvents = "all";
     } else {
-      cp.style.opacity = "0";
-      cp.style.pointerEvents = "none";
+      cpx.style.opacity = "0";
+      cpx.style.pointerEvents = "none";
     }
   }
   
@@ -786,15 +936,33 @@ function table_engine(query, options, type, table) {
   const config_formed = pre_text("...");
   
   const config = {
-    constant_order: false,
     quizlet_json: [],
     x_usync: false,
     filter: false,
     long_order: false,
-    fault_behavior: "Ask For Answer"
+    fault_behavior: "Ask For Answer",
+    threash: 0,
+    accept: false
   }
   
-  cp.appendChild(tb);
+  const cp = column();
+  cp.style.gap = "10px";
+  cp.style.padding = "0px";
+  
+  cpx.appendChild(tb);
+  
+  cpx.appendChild(setting("I acknowlege the risks of using this program, such as breach of student integrity, poor grade, and poor performance.", (d) => {
+    config.accept = d;
+    
+    if (config.accept == "Decline") {
+      cp.remove();
+    } else {
+      cpx.appendChild(cp);
+    }
+  }, "select", "Accept", [
+    "Accept",
+    "Decline"
+  ]));
   
   cp.appendChild(setting("TX Quizlet Output JSON RAW", (d) => {
     config.quizlet_json = d;
@@ -802,6 +970,10 @@ function table_engine(query, options, type, table) {
  
   // cp.appendChild(setting("Enable Chat GPT Fallback (BROKEN)", (d) => {
   // }, "boolean-only"));
+  
+  cp.appendChild(setting("Match certainty threashhold [number]", (d) => {
+      config.threash = d;
+    }, "string", "0.9"));
   
   cp.appendChild(setting("[Recommended for Engineering Quizlets] Use longests value as question, shortest as answer", (d) => {
     config.long_order = d;
@@ -811,13 +983,9 @@ function table_engine(query, options, type, table) {
     config.filter = d;
   }, "boolean-only", true));
   
-    cp.appendChild(setting("Enable XUSYNC Execution (SLOW MODE)", (d) => {
-      config.x_usync = d;
-    }, "boolean-only"));
-  
-  cp.appendChild(setting("Content Order Answers", (d) => {
-    config.constant_order = d;
-  }, "list-boolean"));
+  cp.appendChild(setting("Enable XUSYNC Execution (SLOW MODE)", (d) => {
+    config.x_usync = d;
+  }, "boolean-only"));
   
   cp.appendChild(setting("Answer fault resolution behavior", (d) => {
     config.fault_behavior = d;
@@ -852,8 +1020,11 @@ function table_engine(query, options, type, table) {
   cp.appendChild(get_config_rendered);
   cp.appendChild(config_formed);
   
-  document.body.appendChild(cp);
+  cpx.appendChild(cp);
+  
+  document.body.appendChild(cpx);
   document.body.appendChild(control_button);
+  document.body.appendChild(E_MODAL);
   
   const style_data = `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
