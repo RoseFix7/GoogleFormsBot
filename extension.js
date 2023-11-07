@@ -144,7 +144,11 @@
 
         list_answer(index) {
             if (!this.buttons) return false;
-            this.buttons.children[index].children[0].click();
+            try {
+              this.buttons.children[index].children[0].click();
+            } catch (e) {
+              alert("FORM BUG" + `${e}`);
+            }
 
             return true;
         }
@@ -542,6 +546,8 @@ function table_engine(query, options, type, table, threash = 0.0) {
         flash_loop();
       }
       
+      let answer_x = null;
+      
       {
         start_flash();
         question.root.scrollIntoView();
@@ -550,13 +556,25 @@ function table_engine(query, options, type, table, threash = 0.0) {
         if (cfg.fault_behavior == "Ask For Answer") {
           if (question.mode == "boolean") {
             const select = setting(question.title, (d) => {
-              
+              answer_x = d == "True";
             }, "select", "True", [ "True", "False" ]);
             
             error.appendChild(select);
           } else if (question.mode == "ABCD") {
+            let prefixes = ["A", "B", "C", "D"];
+            let labels = question.options.map((o, i) => `${prefixes[i]}. ${o}`);
             
+            const select = setting(question.title, (d) => {
+              answer_x = labels.indexOf(d);
+            }, "select", labels[0], labels);
+            
+            error.appendChild(select);
           } else if (question.mode == "string") {
+            const inp = setting(question.title, (d) => {
+              answer_x = d;
+            }, "string-inherit");
+            
+            error.appendChild(inp);
             
           } else {
             const error_res = text("Malformed question object, please report this bug to Rayyan!");
@@ -566,7 +584,17 @@ function table_engine(query, options, type, table, threash = 0.0) {
       
       submit.addEventListener("click", () => {
         clean();
-        question.answer_boolean(true); // TODO: Fix
+        
+        if (question.mode == "boolean") {
+          question.answer_boolean(answer_x);
+        } else if (question.mode == "ABCD") {
+          question.list_answer(answer_x);
+        } else if (question.mode == "string") {
+          question.answer_string(answer_x);
+        } else {
+          alert("Unsupported question format! Contact Rayyan!");
+        }
+        
         resolver.resume(index + 1);
       });
       
@@ -835,7 +863,13 @@ function table_engine(query, options, type, table, threash = 0.0) {
     const i = input();
     const save = button(type == "list" || type == "list-boolean" ? "Add" : "Save");
     const toggle = button("Disabled");
-       
+    
+    if (type.includes("inherit")) {
+      i.addEventListener("input", () => {
+        callback(i.value);
+      });
+    }
+
     const list_mode = type == "list" || type == "list-boolean";
     const select_mode = type == "select" || type == "select-boolean";
     const boolean_mode = type == "list-boolean" || type == "boolean" || type == "boolean-only" || type == "select-boolean";
@@ -892,7 +926,7 @@ function table_engine(query, options, type, table, threash = 0.0) {
       callback(state);
     });
       
-    if (!(boolean_mode && !select_mode && !list_mode) && !select_mode) {
+    if (!(boolean_mode && !select_mode && !list_mode) && !select_mode && !type.includes("inherit")) {
       field.appendChild(save);
     }
     
@@ -930,6 +964,11 @@ function table_engine(query, options, type, table, threash = 0.0) {
       callback(current_select);
     } else  {
       i.value = default_value;
+      
+      if (typeof default_value == "boolean") {
+        i.value = "";
+      }
+      
       callback(default_value);
     }
     
