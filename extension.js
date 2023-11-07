@@ -605,7 +605,10 @@ function table_engine(query, options, type, table, threash = 0.0) {
       });
       
       action_row.appendChild(close);
-      action_row.appendChild(submit);
+      
+      if (cfg.fault_behavior == "Ask For Answer") {
+        action_row.appendChild(submit);
+      }
 
       error.appendChild(action_row);
 
