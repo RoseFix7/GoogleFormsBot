@@ -12,6 +12,11 @@
 
 ## Basic Usage
 
+### Initial configuration
+- Accept the risk acknowledgment![image](https://github.com/RoseFix7/GoogleFormsBot/assets/144444996/f19e65d2-eb7e-4968-8722-c08bdbddb303)
+
+
+### Getting answers tables
 **Quizlet**
 - Navigate to your source Quizlet home page and open developer tools via `CTRL + SHIFT + I` ![image](https://github.com/RoseFix7/GoogleFormsBot/assets/144444996/5a5d8eb0-6df6-4477-8838-b5d9d735d6f1)
 - Locate source code from [source-extentions/quizlet.js](https://github.com/RoseFix7/GoogleFormsBot/blob/main/source-extentions/quizlet.js) and paste into the developer tools console
