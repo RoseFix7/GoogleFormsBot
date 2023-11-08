@@ -299,6 +299,7 @@
                           
                           spawn_type_error();
                         }
+                        console.log(result);
                         question.answer_abcd(result);
                         break;
 
@@ -409,7 +410,7 @@ function table_engine(query, options, type, table, threash = 0.0) {
           value: answer,
           failed: true,
           sim: closest_x.sim,
-          ques: Object.keys(table)[closest]
+          ques: table[closest][0]
       };
     }
   
@@ -423,14 +424,14 @@ function table_engine(query, options, type, table, threash = 0.0) {
           value: answer,
           failed: true,
           sim: closest_x.sim,
-          ques: Object.keys(table)[closest]
+          ques: table[closest][0]
         };
     } else {
         return {
           value: answer,
           failed: false,
           sim: closest_x.sim,
-          ques: Object.keys(table)[closest]
+          ques: table[closest][0]
         };
     }
 
@@ -444,7 +445,7 @@ function table_engine(query, options, type, table, threash = 0.0) {
       value: answer,
       failed: true,
       sim: closest_x.sim,
-      ques: Object.keys(table)[closest]
+      ques: table[closest][0]
     };
 }
 
