@@ -30,8 +30,8 @@
     let res_str = "{ ";
 
     output.forEach((property, index) => {
-        res_str += `"${property[0]}": `;
-        const key = property[1];
+        res_str += `"${property[0].replaceAll("'", "\\'")}": `;
+        const key = property[1].replaceAll("'", "\\'");
 
         if (typeof key == "boolean") {
             res_str += key;
