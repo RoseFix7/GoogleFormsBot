@@ -1,4 +1,4 @@
-
+6
 {
     const answers = document.querySelectorAll(".SetPageTerms-term");
     let output = [];
@@ -31,12 +31,12 @@
 
     output.forEach((property, index) => {
         res_str += `"${property[0].replaceAll("'", "\\'")}": `;
-        const key = property[1].replaceAll("'", "\\'");
+        const key = property[1];
 
         if (typeof key == "boolean") {
             res_str += key;
         } else {
-            res_str += `"${key}"`;
+            res_str += `"${key.replaceAll("'", "\\'")}"`;
         }
 
         if (output.length - 1 != index) {
