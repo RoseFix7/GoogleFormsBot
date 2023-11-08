@@ -1,4 +1,5 @@
 {
+    Error.stackTraceLimit = 20;
     function similarity(s1, s2) {
         var longer = s1;
         var shorter = s2;
@@ -94,9 +95,9 @@
                 }
 			}
 
-            // console.log("Question initialized");
-            // console.log(`-- Mode: ${this.mode}`);
-            // console.log(`-- Name: ${this.title}`);
+        console.log("Question initialized");
+        console.log(`-- Mode: ${this.mode}`);
+        console.log(`-- Name: ${this.title}`);
 		}
 
         answer_boolean(value) {
@@ -104,6 +105,7 @@
         }
 
         answer_abcd(value) {
+          console.log("ANSWERING ABCD", value)
             const data = ["A", "B", "C", "D"].indexOf(value);
             if (data == -1) {
                 let ratings = [];
@@ -112,6 +114,7 @@
                     const option = letter_option.children[0].children[0].children[1].children[0].children[0];
                     const text = this.options[button];
 
+                  console.log("XV", value);
                     ratings.push(similarity(text, value));
                 }
 
@@ -216,6 +219,7 @@
         }
       
         resume(index) {
+          console.log("RESUME");
           const questions = this.questions.filter((_, i) => i >= index);
           this.answer_all_engine(questions, index);
         }
@@ -252,17 +256,47 @@
                 
                 return;
               }
-                // console.log(`Attempting to answer question "${question.title}"`);
-                // console.log(`-- Mode: ${question.mode}`);
-                // console.log(`-- Options: ${question.options.join(", ")}`);
-                // console.log(`-- Fetched answer: "${result}"`);
+                console.log(`Attempting to answer question "${question.title}"`);
+                console.log(`-- Mode: ${question.mode}`);
+                console.log(`-- Options: ${question.options.join(", ")}`);
+                console.log(`-- Fetched answer: "${result}"`);
 
+                const type_error = column();
+                const exit = button("Close");
+                const actions = row();
+                const error_lines = [];
+              
+                actions.style.justifyContent = "flex-end";
+                actions.appendChild(exit);
+              
+                exit.addEventListener("click", () => {
+                  dismiss_EM();
+                });
+              
+                function spawn_type_error() {
+                  error_lines.forEach((e_line) => {
+                    const label = text(e_line);
+                    
+                    type_error.appendChild(label);
+                  });
+                  
+                  type_error.appendChild(actions);
+                  spawn_EM(type_error, true);
+                }
+              
                 switch (question.mode) {
                     case "boolean":
                         question.answer_boolean(result);
                         break;
 
                     case "ABCD":
+                        if (typeof result == "boolean") {
+                          error_lines.push("Message: Type error in answer table.");
+                          error_lines.push("Question: " + question.title);
+                          error_lines.push("Answer Received from Table: " + result);
+                          
+                          spawn_type_error();
+                        }
                         question.answer_abcd(result);
                         break;
 
@@ -362,7 +396,8 @@ function table_engine(query, options, type, table, threash = 0.0) {
       return {
           value: answer,
           failed: true,
-          sim: closest_x.sim
+          sim: closest_x.sim,
+          ques: Object.keys(table)[closest]
       };
     }
   
@@ -375,17 +410,18 @@ function table_engine(query, options, type, table, threash = 0.0) {
         return {
           value: answer,
           failed: true,
-          sim: closest_x.sim
+          sim: closest_x.sim,
+          ques: Object.keys(table)[closest]
         };
     } else {
         return {
           value: answer,
           failed: false,
-          sim: closest_x.sim
+          sim: closest_x.sim,
+          ques: Object.keys(table)[closest]
         };
     }
 
-  console.log("##### INCOMING PACKET #####")
     // console.log(answer);
 
     if (type == "ABCD") {
@@ -395,7 +431,8 @@ function table_engine(query, options, type, table, threash = 0.0) {
     return {
       value: answer,
       failed: true,
-      sim: closest_x.sim
+      sim: closest_x.sim,
+      ques: Object.keys(table)[closest]
     };
 }
 
@@ -498,13 +535,17 @@ function table_engine(query, options, type, table, threash = 0.0) {
       const { index, result, question } = trace;
       
       const error = column();
+      const closest_question = result.ques ?? "Undefined question";
+      const closest_answer = result.value;
       
       const lines = [
         text("ERROR! Question resolution fault"),
         text(`Question: ${question.title}`),
         text(`Identifier: ${index}`),
-        text(`Closest answer: ${result.value} (Approximate Accuracy: ${(result.sim * 100).toString().slice(0, 4)}%`)
+        text(`Closest question: ${closest_question} (Approximate Accuracy: ${(result.sim * 100).toString().slice(0, 4)}%`),
+        text(`Closest answer: ${closest_answer} (Approximate Accuracy: ${(result.sim * 100).toString().slice(0, 4)}%`)
       ];
+      
       
       lines.forEach(line => error.appendChild(line));
       error.appendChild(br());
@@ -555,9 +596,10 @@ function table_engine(query, options, type, table, threash = 0.0) {
           // function setting(name, callback, type = "string", default_value = false, select_obj = []) {
         if (cfg.fault_behavior == "Ask For Answer") {
           if (question.mode == "boolean") {
+            let closest_boolean = closest_answer == true ? "True" : "False";
             const select = setting(question.title, (d) => {
               answer_x = d == "True";
-            }, "select", "True", [ "True", "False" ]);
+            }, "select", closest_boolean, [ "True", "False" ]);
             
             error.appendChild(select);
           } else if (question.mode == "ABCD") {
@@ -566,18 +608,19 @@ function table_engine(query, options, type, table, threash = 0.0) {
             
             const select = setting(question.title, (d) => {
               answer_x = labels.indexOf(d);
-            }, "select", labels[0], labels);
+            }, "select", closest_answer, labels);
             
             error.appendChild(select);
           } else if (question.mode == "string") {
             const inp = setting(question.title, (d) => {
               answer_x = d;
-            }, "string-inherit");
+            }, "string-inherit", closest_answer);
             
             error.appendChild(inp);
             
           } else {
             const error_res = text("Malformed question object, please report this bug to Rayyan!");
+            spawn_EM(error_res)
           }
         }
       }
@@ -742,7 +785,7 @@ function table_engine(query, options, type, table, threash = 0.0) {
     rows.appendChild(text(name));
     
     let data_filled = [
-      JSON.stringify({ "A pure inductive circuit is an AC circuit with no resistance.": true,"Kirchhoff's voltage law states that the algebraic sum of the voltage in a closed-loop circuit is equal to zero": true, false: "Current in an inductive AC circuit can be calculated without knowing source voltage." })
+      JSON.stringify({ "BS 1": true,"str form": "Hello", "AAA": "AB_ENGINE" })
     ];
     const data_elements = column();
     const select_elements = column();
