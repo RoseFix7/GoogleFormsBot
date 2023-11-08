@@ -1,5 +1,7 @@
 {
     Error.stackTraceLimit = 20;
+    console.clear();
+  
     function similarity(s1, s2) {
         var longer = s1;
         var shorter = s2;
@@ -384,13 +386,23 @@ function get_closest_index(test, strings) {
       sim: largest_sim
     };
 }
+  
+  function get_table_keys(table) {
+    let keys = [];
+    
+    table.forEach((record) => {
+      keys.push(record[0]);
+    });
+    
+    return keys;
+  }
 
 function table_engine(query, options, type, table, threash = 0.0) {
-    const closest_x = get_closest_index(query, Object.keys(table));
+    const closest_x = get_closest_index(query, get_table_keys(table));
     const closest = closest_x.value;
-    const answer = Object.values(table)[closest];
-  
-  console.log(answer);
+    let answer = table[closest][1];
+   
+  // console.log(answer);
   
     if (closest_x.sim <= threash) {
       return {
@@ -449,15 +461,14 @@ function table_engine(query, options, type, table, threash = 0.0) {
 // resolver.answer_all_engine();
   
   function transform_quizlet_json(quizlet_json = []) {
-    const final = {};
+    const final = [];
     
     quizlet_json.forEach((str_json) => {
       try {
         const parsed = JSON.parse(str_json);
-        const keys = Object.keys(parsed);
         
-        keys.forEach(key => {
-          final[key] = parsed[key];
+        parsed.forEach((x) => {
+          final.push([x[0], x[1]]);
         });
       } catch (error) {
         console.error(error);
@@ -485,7 +496,7 @@ function table_engine(query, options, type, table, threash = 0.0) {
       }
     })
     
-    return result;
+    return obj;// TODO: Fix this
   }
   
     let show_panel = true;
@@ -519,7 +530,7 @@ function table_engine(query, options, type, table, threash = 0.0) {
         quizlet_data = transform_order(quizlet_data);
       }  
     }
-    
+       
     const questions = get_questions();
     const resolver = new QuestionResolver(questions.filter(q => q.title && q.title.length > 0), "provided", (query, options, type) => {
         return table_engine(query, options, type, quizlet_data, cfg.threash);
@@ -785,7 +796,7 @@ function table_engine(query, options, type, table, threash = 0.0) {
     rows.appendChild(text(name));
     
     let data_filled = [
-      JSON.stringify({ "BS 1": true,"str form": "Hello", "AAA": "AB_ENGINE" })
+      JSON.stringify([ ["BS 1", true], ["str form", "Hello"], ["AB_ENGINE", "AAA"] ])
     ];
     const data_elements = column();
     const select_elements = column();
