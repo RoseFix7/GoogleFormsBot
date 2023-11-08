@@ -1,6 +1,7 @@
+
 {
     const answers = document.querySelectorAll(".SetPageTerms-term");
-    let output = {};
+    let output = [];
     
     answers.forEach((term) => {
         const root = term.children[0].children[0].children[0].children[0];
@@ -15,14 +16,35 @@
         const answer = ex_answer.innerText;
 
         if (answer.toLowerCase() == "true" || answer.toLowerCase() == "t") {
-            output[question] == true;
+            output.push([question, true]);
         } else if (answer.toLowerCase() == "false" || answer.toLowerCase() == "f") {
-            output[question] = false;
+            output.push([question, false]);
         } else {
-            output[question] = answer.toLowerCase();
+            output.push([question, answer.toLowerCase()]);
         }
     });
 
-   console.log("Please paste the following raw JSON data into the TX Quizlet JSON RAW input along with any other sources");
-    console.log(JSON.stringify(output));
+    console.log("Please paste the following raw JSON data into the TX Quizlet JSON RAW input along with any other sources");
+    console.log(output);
+
+    let res_str = "{ ";
+
+    output.forEach((property, index) => {
+        res_str += `"${property[0]}": `;
+        const key = property[1];
+
+        if (typeof key == "boolean") {
+            res_str += key;
+        } else {
+            res_str += `"${key}"`;
+        }
+
+        if (output.length - 1 != index) {
+            res_str += ", ";
+        }
+    });
+
+    res_str += "}";
+
+    console.log(res_str);
 }
