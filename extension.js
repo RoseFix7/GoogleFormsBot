@@ -480,24 +480,19 @@ function table_engine(query, options, type, table, threash = 0.0) {
   }
   
   function transform_order(obj) {
-    const keys = Object.keys(obj);
-    let result = {};
+    let result = [];
     
-    keys.forEach((key) => {
-      if (key.length < (obj[key] + "").length) {
-        result[obj[key] + ""] = key + "";
-        
-        if (result[obj[key]] == "true") {
-          result[obj[key]] = true;
-        } else if (result[obj[key]] == "false") {
-          result[obj[key]] = false;
-        }
+    obj.forEach((prop) => {
+      if (prop[1].length > prop[0].length) {
+        result.push([
+          prop[1], prop[0]
+        ])
       } else {
-        result[key] = obj[key];
+        result.push(prop);
       }
     })
     
-    return obj;// TODO: Fix this
+    return result;
   }
   
     let show_panel = true;
@@ -797,7 +792,6 @@ function table_engine(query, options, type, table, threash = 0.0) {
     rows.appendChild(text(name));
     
     let data_filled = [
-      JSON.stringify([ ["BS 1", true], ["str form", "Hello"], ["AB_ENGINE", "AAA"] ])
     ];
     const data_elements = column();
     const select_elements = column();
