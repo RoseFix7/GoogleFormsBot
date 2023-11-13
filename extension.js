@@ -403,9 +403,10 @@ function table_engine(query, options, type, table, threash = 0.0) {
     const closest = closest_x.value;
     let answer = table[closest][1];
    
-  // console.log(answer);
+  console.log(closest_x);
   
     if (closest_x.sim <= threash) {
+      alert("F")
       return {
           value: answer,
           failed: true,
@@ -415,7 +416,7 @@ function table_engine(query, options, type, table, threash = 0.0) {
     }
   
 
-    if (type == "boolean" && typeof answer != "boolean") {
+    if (false) {
         console.error("Failed");
         console.error(Object.values(table));
         console.error(closest);
